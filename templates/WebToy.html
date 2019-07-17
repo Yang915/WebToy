@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title id="title"></title>
+
+</head>
+<body>
+<audio id="player" autoplay controls></audio>
+<p>
+    <button onclick="start_reco()">开始录音</button>
+</p>
+<p>
+    <button onclick="ai_reco()" style="background-color: cornflowerblue">发送语音指令</button>
+</p>
+</body>
+<script type="application/javascript" src="/static/jquery-3.3.1.min.js"></script>
+<script type="text/javascript" src="/static/Recorder.js"></script>
+<script type="application/javascript">
+    var serv = "http://127.0.0.1:5000";
+    var audio_context = new AudioContext();//音频内容对象
+    navigator.getUserMedia = (navigator.getUserMedia ||
+        navigator.webkitGetUserMedia ||
+        navigator.mozGetUserMedia ||
+        navigator.msGetUserMedia);
+
+    navigator.getUserMedia({audio: true}, create_stream, function (err) {
+        console.log(err)
+    });
+
+    function create_stream(user_media) {
+        var stream_input = audio_context.createMediaStreamSource(user_media);
+        reco = new Recorder(stream_input);
+    }
+
+
+    function start_reco() {
+        reco.record();
+    }
+
+    function ai_reco() {
+        reco.stop();
+
+        reco.exportWAV(function (wav_file) {
+            console.log(wav_file);
+            var formdata = new FormData(); // form 表单 {key:value}
+            formdata.append("reco", wav_file); // form input type="file"
+            $.ajax({
+                url: serv + "/ai_uploader",
+                type: 'post',
+                processData: false,
+                contentType: false,
+                data: formdata,
+                dataType: 'json',
+                success: function (data) {
+                    //console.log(data.filename);
+                    var filename = data.filename;
+                    document.getElementById('player').src = serv + '/get_answer/' + filename;
+                }
+            })
+        });
+
+        reco.clear();
+    }
+
+</script>
+</html>
